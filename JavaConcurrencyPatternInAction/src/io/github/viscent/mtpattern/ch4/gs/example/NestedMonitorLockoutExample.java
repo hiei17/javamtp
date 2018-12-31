@@ -13,78 +13,78 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch4.gs.example;
 
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.Callable;
-
 import io.github.viscent.mtpattern.ch4.gs.Blocker;
 import io.github.viscent.mtpattern.ch4.gs.ConditionVarBlocker;
 import io.github.viscent.mtpattern.ch4.gs.GuardedAction;
 import io.github.viscent.mtpattern.ch4.gs.Predicate;
 import io.github.viscent.util.Debug;
 
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.Callable;
+
 /**
  * 本程序是为了演示“嵌套监视器锁死“而写的，因此本程序需要通过手工终止进程才能结束。
- * 
+ * mark 因为唤醒和运行目标  方法都加了synchronized  死锁了
+ * 执行里面让出了condition锁休眠了 等唤醒线程把它唤醒 但是唤醒线程又在等执行外面得到的NestedMonitorLockoutExample对象上的锁
  * @author Viscent Huang
  *
  */
 public class NestedMonitorLockoutExample {
 
     public static void main(String[] args) {
+
         final Helper helper = new Helper();
         Debug.info("Before calling guaredMethod.");
 
-        Thread t = new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                String result;
-                result = helper.xGuarededMethod("test");
-                Debug.info(result);
-            }
-
+        Thread t = new Thread(() -> {
+            String result;
+            //保护方法执行线程
+            result = helper.xGuarededMethod("test");
+            Debug.info(result);
         });
         t.start();
 
         final Timer timer = new Timer();
 
         // 延迟50ms调用helper.stateChanged方法
-        timer.schedule(new TimerTask() {
+        TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 helper.xStateChanged();
                 timer.cancel();
             }
 
-        }, 50, 10);
+        };
+        //保护方法唤醒线程
+        timer.schedule(task, 50, 10);
+
 
     }
 
     private static class Helper {
+
+        //保护条件
         private volatile boolean isStateOK = false;
-        private final Predicate stateBeOK = new Predicate() {
-
-            @Override
-            public boolean evaluate() {
-                return isStateOK;
-            }
-
-        };
+        private final Predicate stateBeOK = () -> isStateOK;
 
         private final Blocker blocker = new ConditionVarBlocker();
 
         public synchronized String xGuarededMethod(final String message) {
+
             GuardedAction<String> ga = new GuardedAction<String>(stateBeOK) {
 
+                //mark 目标动作
                 @Override
-                public String call() throws Exception {
+                public String call() {
                     return message + "->received.";
                 }
 
             };
+
             String result = null;
             try {
+                //mark 执行目标(堵塞)
                 result = blocker.callWithGuard(ga);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -92,18 +92,19 @@ public class NestedMonitorLockoutExample {
             return result;
         }
 
+
         public synchronized void xStateChanged() {
             try {
-                blocker.signalAfter(new Callable<Boolean>() {
 
-                    @Override
-                    public Boolean call() throws Exception {
-                        isStateOK = true;
-                        Debug.info("state ok.");
-                        return Boolean.TRUE;
-                    }
+                Callable<Boolean> booleanCallable = () -> {
+                    isStateOK = true;
+                    Debug.info("state ok.");
+                    return Boolean.TRUE;
+                };
 
-                });
+                //mark 唤醒
+                blocker.signalAfter(booleanCallable);
+
             } catch (Exception e) {
                 e.printStackTrace();
             }

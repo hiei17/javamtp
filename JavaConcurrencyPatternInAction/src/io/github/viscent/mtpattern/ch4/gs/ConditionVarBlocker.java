@@ -13,12 +13,12 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch4.gs;
 
+import io.github.viscent.util.Debug;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import io.github.viscent.util.Debug;
 
 public class ConditionVarBlocker implements Blocker {
     private final Lock lock;
@@ -50,27 +50,45 @@ public class ConditionVarBlocker implements Blocker {
         throw new IllegalStateException("Access to the lock disallowed.");
     }
 
-    public <V> V callWithGuard(GuardedAction<V> guardedAction)
-            throws Exception {
+    @Override
+    public <V> V callWithGuard(GuardedAction<V> guardedAction) throws Exception {
+
         lock.lockInterruptibly();
-        V result;
+        V actionReturnValue;
         try {
+            //mark 4.5. 获取保护条件
+            //保护条件
             final Predicate guard = guardedAction.guard;
-            while (!guard.evaluate()) {
+
+            //mark 6.7.8. 循环直至某次被唤醒发现条件满足
+            while (!guard.evaluate()) {// 只要不满足
+
                 Debug.info("waiting...");
                 condition.await();
             }
-            result = guardedAction.call();
-            return result;
+
+            //满足以后才会到这
+
+
+            //mark 9.10 执行目标动作
+            actionReturnValue = guardedAction.call();
+            //mark 11
+            return actionReturnValue;
         } finally {
             lock.unlock();
         }
     }
 
+    @Override
     public void signalAfter(Callable<Boolean> stateOperation) throws Exception {
+
+        //这个锁 使stateOperation.call()改变保护方法执行线程的  while (这里面的条件) 可见
         lock.lockInterruptibly();
         try {
-            if (stateOperation.call()) {
+            //mark 唤醒4.5.改变GuardedObject实例的状态 并记录返回值
+            Boolean shouldSignalBlocker = stateOperation.call();
+            if (shouldSignalBlocker) {
+                //mark 唤醒6.7. 唤醒被该condition实例暂挂的一个线程
                 condition.signal();
             }
         } finally {
@@ -79,6 +97,7 @@ public class ConditionVarBlocker implements Blocker {
 
     }
 
+    @Override
     public void broadcastAfter(Callable<Boolean> stateOperation)
             throws Exception {
         lock.lockInterruptibly();
@@ -92,6 +111,7 @@ public class ConditionVarBlocker implements Blocker {
 
     }
 
+    @Override
     public void signal() throws InterruptedException {
         lock.lockInterruptibly();
         try {

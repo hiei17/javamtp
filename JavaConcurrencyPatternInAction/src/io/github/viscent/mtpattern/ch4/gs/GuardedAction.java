@@ -15,10 +15,17 @@ package io.github.viscent.mtpattern.ch4.gs;
 
 import java.util.concurrent.Callable;
 
+/**
+ * 抽象了目标动作
+ * @param <V>
+ */
 public abstract class GuardedAction<V> implements Callable<V> {
+
+    //目标动作所需的保护条件
     protected final Predicate guard;
 
     public GuardedAction(Predicate guard) {
         this.guard = guard;
     }
+
 }
