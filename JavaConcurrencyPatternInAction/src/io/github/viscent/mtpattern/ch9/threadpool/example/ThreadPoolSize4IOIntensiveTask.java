@@ -13,25 +13,29 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch9.threadpool.example;
 
+import io.github.viscent.util.Debug;
+
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import io.github.viscent.util.Debug;
-
 public class ThreadPoolSize4IOIntensiveTask {
 
     public static void main(String[] args) {
 
+        //mark io密集型
         ThreadPoolExecutor threadPool =
                 new ThreadPoolExecutor(
+
                         // 核心线程池大小为1
                         1,
                         // 最大线程池大小为2*Ncpu
                         Runtime.getRuntime().availableProcessors() * 2,
+
                         60,
                         TimeUnit.SECONDS,
-                        new ArrayBlockingQueue<Runnable>(200));
+
+                        new ArrayBlockingQueue<>(200)
+                );
 
         threadPool.submit(new IOIntensiveTask());
 

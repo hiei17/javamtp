@@ -13,29 +13,38 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch10.tss.example;
 
-import java.text.DecimalFormat;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 import io.github.viscent.util.Debug;
 
-public class SmsVerficationCodeSender {
-    private static final ExecutorService EXECUTOR =
-            new ThreadPoolExecutor(1,
-                    Runtime.getRuntime().availableProcessors(), 60,
-                    TimeUnit.SECONDS,
-                    new SynchronousQueue<Runnable>(), new ThreadFactory() {
-                        @Override
-                        public Thread newThread(Runnable r) {
-                            Thread t = new Thread(r, "VerfCodeSender");
-                            t.setDaemon(true);
-                            return t;
-                        }
+import java.text.DecimalFormat;
+import java.util.concurrent.*;
 
-                    }, new ThreadPoolExecutor.DiscardPolicy());
+public class SmsVerficationCodeSender {
+
+    private static final ExecutorService EXECUTOR =
+            new ThreadPoolExecutor(
+
+                    //mark 事先创好核心线程 来了任务可能就不用等创建线程了
+                    //一般就保留1个 最多和cpu一样多
+                    1,//没满corePoolSize之前来一个任务都多一个线程 ,不排队(即使有线程闲着)
+                    Runtime.getRuntime().availableProcessors(),
+
+                    //闲置60s 就销毁线程
+                    60,
+                    TimeUnit.SECONDS,
+
+                    //无等待
+                    new SynchronousQueue<>(),
+
+                    //线程取名 守护者
+                    r -> {
+                        Thread t = new Thread(r, "VerfCodeSender");
+                        t.setDaemon(true);
+                        return t;
+                    },
+
+                    //来不及处理就丢弃
+                    new ThreadPoolExecutor.DiscardPolicy()
+            );
 
     public static void main(String[] args) {
         SmsVerficationCodeSender client = new SmsVerficationCodeSender();
@@ -58,20 +67,17 @@ public class SmsVerficationCodeSender {
      *            短信接收方号码。
      */
     public void sendVerificationSms(final String msisdn) {
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                // 生成强随机数验证码
-                int verificationCode =
-                        ThreadSpecificSecureRandom.INSTANCE
-                                .nextInt(999999);
-                DecimalFormat df = new DecimalFormat("000000");
-                String txtVerCode = df.format(verificationCode);
 
-                // 发送验证码短信
-                sendSms(msisdn, txtVerCode);
-            }
+        Runnable task = () -> {
+            // 生成强随机数验证码
+            int verificationCode =
+                    ThreadSpecificSecureRandom.INSTANCE
+                            .nextInt(999999);
+            DecimalFormat df = new DecimalFormat("000000");
+            String txtVerCode = df.format(verificationCode);
 
+            // 发送验证码短信
+            sendSms(msisdn, txtVerCode);
         };
 
         EXECUTOR.submit(task);

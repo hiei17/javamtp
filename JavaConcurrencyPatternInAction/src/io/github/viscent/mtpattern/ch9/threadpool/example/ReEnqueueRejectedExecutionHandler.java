@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  * 该线程池饱和处理策略支持将提交失败的任务重新放入线程池工作队列。
  * 
  * @author Viscent Huang
- *
+ *  mark 饱和处理策略:  重新入队,阻塞式的 放进去才罢休
  */
 public class ReEnqueueRejectedExecutionHandler
         implements RejectedExecutionHandler {
