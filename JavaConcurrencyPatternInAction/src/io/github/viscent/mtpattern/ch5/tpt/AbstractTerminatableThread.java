@@ -22,10 +22,10 @@ import org.apache.log4j.Logger;
  * 
  * @author Viscent Huang
  */
-public abstract class AbstractTerminatableThread extends Thread
-        implements Terminatable {
-    final static Logger logger =
-            Logger.getLogger(AbstractTerminatableThread.class);
+public abstract class AbstractTerminatableThread extends Thread implements Terminatable {
+
+    final static Logger logger = Logger.getLogger(AbstractTerminatableThread.class);
+
     private final boolean DEBUG = true;
 
     // 模式角色：Two-phaseTermination.TerminationToken
@@ -37,8 +37,7 @@ public abstract class AbstractTerminatableThread extends Thread
 
     /**
      * 
-     * @param terminationToken
-     *            线程间共享的线程终止标志实例
+     * @param terminationToken 线程间共享的线程终止标志实例
      */
     public AbstractTerminatableThread(TerminationToken terminationToken) {
         this.terminationToken = terminationToken;
@@ -46,14 +45,15 @@ public abstract class AbstractTerminatableThread extends Thread
     }
 
     /**
-     * 留给子类实现其线程处理逻辑。
-     * 
+     * 留给子类实现其  线程处理逻辑。
+     *
+     * mark 在run()调用 就是如果没停 正常情况会一直干的工作
      * @throws Exception
      */
     protected abstract void doRun() throws Exception;
 
     /**
-     * 留给子类实现。用于实现线程停止后的一些清理动作。
+     * mark 留给子类实现。用于实现线程停止后的一些清理动作。
      * 
      * @param cause
      */
@@ -62,7 +62,7 @@ public abstract class AbstractTerminatableThread extends Thread
     }
 
     /**
-     * 留给子类实现。用于执行线程停止所需的操作。
+     * mark 留给子类实现。用于执行线程停止所需的操作。
      */
     protected void doTerminiate() {
         // 什么也不做
@@ -72,11 +72,11 @@ public abstract class AbstractTerminatableThread extends Thread
     public void run() {
         Exception ex = null;
         try {
+            //mark  死循环不叫停 就会一直从队列里拿来处理
             for (;;) {
 
-                // 在执行线程的处理逻辑前先判断线程停止的标志。
-                if (terminationToken.isToShutdown()
-                        && terminationToken.reservations.get() <= 0) {
+                //mark 在执行线程的处理逻辑前先判断线程停止的标志。
+                if (terminationToken.toShutdown && terminationToken.reservations.get() <= 0) {
                     break;
                 }
                 doRun();
@@ -94,8 +94,10 @@ public abstract class AbstractTerminatableThread extends Thread
             }
         } finally {
             try {
+                //子类实现的清理
                 doCleanup(ex);
             } finally {
+                //停止 这个线程停止标志 上其他线程
                 terminationToken.notifyThreadTermination(this);
             }
         }
@@ -107,25 +109,31 @@ public abstract class AbstractTerminatableThread extends Thread
     }
 
     /*
-     * 请求停止线程。
-     * 
+     * mark 请求停止线程。
+     *  实现Terminatable接口唯一方法
      * @see io.github.viscent.mtpattern.tpt.Terminatable#terminate()
      */
     @Override
     public void terminate() {
-        terminationToken.setToShutdown(true);
+
+        //mark 3.4. 设标志
+        terminationToken.toShutdown=true;
         try {
+            //mark 5 调用指令实现 实现终止需要的一些额外操作(有些阻塞interrupt都停不掉),可以空着
             doTerminiate();
         } finally {
 
             // 若无待处理的任务，则试图强制终止线程
             if (terminationToken.reservations.get() <= 0) {
+
+                //mark 6. 打断wait  sleep  等 让他们抛出异常终止
                 super.interrupt();
             }
         }
     }
 
     public void terminate(boolean waitUtilThreadTerminated) {
+
         terminate();
         if (waitUtilThreadTerminated) {
             try {

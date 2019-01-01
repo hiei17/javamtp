@@ -41,7 +41,7 @@ public class WorkStealingChannel<T> implements WorkStealingEnabledChannel<T> {
         while (null == product) {
             queueIndex = (queueIndex + 1) % managedQueues.length;
             targetQueue = managedQueues[queueIndex];
-            // 试图从其它受管队列的队尾“窃取”“产品”
+            //mark  试图从其它受管队列的队尾“窃取”“产品”
             product = targetQueue.pollLast();
             if (preferredQueue == targetQueue) {
                 break;
@@ -51,8 +51,8 @@ public class WorkStealingChannel<T> implements WorkStealingEnabledChannel<T> {
         if (null == product) {
 
             // 随机”窃取“其它受管队列的”产品“
-            queueIndex = (int) (System.currentTimeMillis()
-                    % managedQueues.length);
+            queueIndex = (int) (System.currentTimeMillis() % managedQueues.length);
+
             targetQueue = managedQueues[queueIndex];
             product = targetQueue.takeLast();
             System.out.println("stealed from " + queueIndex + ":" + product);

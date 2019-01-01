@@ -32,11 +32,11 @@ public class SemaphoreBasedChannel<P> implements Channel<P> {
      * 
      * @param queue
      *            阻塞队列，通常是一个无界阻塞队列。
-     * @param flowLimit
-     *            流量限制数
+     * @param  flowLimit  流量限制数
      */
     public SemaphoreBasedChannel(BlockingQueue<P> queue, int flowLimit) {
         this.queue = queue;
+        //mark 通行证个数
         this.semaphore = new Semaphore(flowLimit);
     }
 

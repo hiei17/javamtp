@@ -66,7 +66,7 @@ public class ThreadPoolPipeDecorator<IN, OUT> implements Pipe<IN, OUT> {
 					    .decrementAndGet();
 				}
 
-				if (terminationToken.isToShutdown() && 0 == remainingReservations) {
+				if (terminationToken.toShutdown && 0 == remainingReservations) {
 					stageProcessDoneLatch.countDown();
 				}
 			}

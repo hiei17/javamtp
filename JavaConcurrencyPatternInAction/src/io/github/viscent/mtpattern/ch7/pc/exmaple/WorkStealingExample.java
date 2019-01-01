@@ -13,39 +13,45 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch7.pc.exmaple;
 
-import java.util.Random;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.LinkedBlockingDeque;
-
 import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
 import io.github.viscent.mtpattern.ch5.tpt.TerminationToken;
 import io.github.viscent.mtpattern.ch7.pc.WorkStealingChannel;
 import io.github.viscent.mtpattern.ch7.pc.WorkStealingEnabledChannel;
 
+import java.util.Random;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+
 /**
  * 工作窃取算法示例。 该类使用Two-phase Termination模式（参见第5章）。
- * 
+ * mark 消费者线程 : 这里用一个消费者对一个线程 一个模式有多个队列
+ * mark  工作窃取: 一个消费者处理完自己的 ,可以拿其他消费者队列里的出来处理
  * @author Viscent Huang
  *
  */
 public class WorkStealingExample {
+
 	private final WorkStealingEnabledChannel<String> channel;
 	private final TerminationToken token = new TerminationToken();
 
 	public WorkStealingExample() {
+
 		int nCPU = Runtime.getRuntime().availableProcessors();
+
 		int consumerCount = nCPU / 2 + 1;
 
+		//mark 多个队列
 		@SuppressWarnings("unchecked")
-		BlockingDeque<String>[] managedQueues 
-												= new LinkedBlockingDeque[consumerCount];
+		BlockingDeque<String>[] managedQueues = new LinkedBlockingDeque[consumerCount];
 
 		// 该通道实例对应了多个队列实例managedQueues
-		channel = new WorkStealingChannel<String>(managedQueues);
+		channel = new WorkStealingChannel<>(managedQueues);
 
+		//mark 多个消费者
 		Consumer[] consumers = new Consumer[consumerCount];
 		for (int i = 0; i < consumerCount; i++) {
-			managedQueues[i] = new LinkedBlockingDeque<String>();
+			//一个消费者 一个队列
+			managedQueues[i] = new LinkedBlockingDeque<>();
 			consumers[i] = new Consumer(token, managedQueues[i]);
 
 		}
@@ -66,8 +72,8 @@ public class WorkStealingExample {
 	}
 
 	public static void main(String[] args) throws InterruptedException {
-		WorkStealingExample wse;
-		wse = new WorkStealingExample();
+
+		WorkStealingExample wse= new WorkStealingExample();
 
 		wse.doSomething();
 		Thread.sleep(3500);
@@ -86,6 +92,7 @@ public class WorkStealingExample {
 	}
 
 	private class Consumer extends AbstractTerminatableThread {
+
 		private final BlockingDeque<String> workQueue;
 
 		public Consumer(TerminationToken token, BlockingDeque<String> workQueue) {

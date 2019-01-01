@@ -15,6 +15,7 @@ package io.github.viscent.mtpattern.ch14.hsha.example;
 
 import io.github.viscent.mtpattern.ch5.tpt.example.AlarmType;
 
+
 public class AlarmInfo {
     private String id;
     private String extraInfo;

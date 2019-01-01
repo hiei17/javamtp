@@ -13,16 +13,16 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch5.tpt.example;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-
+//mark  使用本模式复用代码 生产者消费者 例子
 import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
 import io.github.viscent.util.Tools;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
 public class SomeService {
-    private final BlockingQueue<String> queue =
-            new ArrayBlockingQueue<String>(
-                    100);
+
+    private final BlockingQueue<String> queue = new ArrayBlockingQueue<>(100);
 
     private final Producer producer = new Producer();
     private final Consumer consumer = new Consumer();
@@ -36,12 +36,13 @@ public class SomeService {
             consumer.terminationToken.reservations.incrementAndGet();
         }
 
-    };
+    }
 
     private class Consumer extends AbstractTerminatableThread {
 
         @Override
         protected void doRun() throws Exception {
+
             String product = queue.take();
             System.out.println("Processing product:" + product);
 
@@ -68,6 +69,7 @@ public class SomeService {
     }
 
     public static void main(String[] args) throws InterruptedException {
+
         SomeService ss = new SomeService();
         ss.init();
         Thread.sleep(500);

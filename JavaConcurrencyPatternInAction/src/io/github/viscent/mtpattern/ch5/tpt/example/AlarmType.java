@@ -14,6 +14,7 @@ http://www.broadview.com.cn/27006
 package io.github.viscent.mtpattern.ch5.tpt.example;
 
 public enum AlarmType {
+
     FAULT("fault"), RESUME("resume");
 
     private final String name;
@@ -22,6 +23,7 @@ public enum AlarmType {
         this.name = name;
     }
 
+    @Override
     public String toString() {
 
         return name;

@@ -13,14 +13,14 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch14.hsha.example;
 
+import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
+import io.github.viscent.mtpattern.ch5.tpt.example.AlarmType;
+
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
-import io.github.viscent.mtpattern.ch5.tpt.example.AlarmType;
 
 /*
  * 告警发送线程。
@@ -34,22 +34,26 @@ public class AlarmSendingThread extends AbstractTerminatableThread {
     /*
      * 告警队列。 模式角色：HalfSync/HalfAsync.Queue
      */
-    private final BlockingQueue<AlarmInfo> alarmQueue;
+    private final BlockingQueue<AlarmInfo> alarmQueue;//放待处理的告警
+
     private final ConcurrentMap<String, AtomicInteger> submittedAlarmRegistry;
 
     public AlarmSendingThread() {
 
-        alarmQueue = new ArrayBlockingQueue<AlarmInfo>(100);
+        alarmQueue = new ArrayBlockingQueue<>(100);
 
-        submittedAlarmRegistry = new ConcurrentHashMap<String, AtomicInteger>();
+        submittedAlarmRegistry = new ConcurrentHashMap<>();
 
         alarmAgent.init();
     }
 
+    //mark 要干的活
     @Override
     protected void doRun() throws Exception {
-        AlarmInfo alarm;
-        alarm = alarmQueue.take();
+
+        AlarmInfo alarm = alarmQueue.take();
+
+        //mark 干掉一个 reservations--
         terminationToken.reservations.decrementAndGet();
 
         try {
@@ -77,6 +81,7 @@ public class AlarmSendingThread extends AbstractTerminatableThread {
     }
 
     public int sendAlarm(final AlarmInfo alarmInfo) {
+
         AlarmType type = alarmInfo.type;
         String id = alarmInfo.getId();
         String extraInfo = alarmInfo.getExtraInfo();
@@ -92,17 +97,24 @@ public class AlarmSendingThread extends AbstractTerminatableThread {
 
             AtomicInteger prevSubmittedCounter;
 
-            prevSubmittedCounter =
-                    submittedAlarmRegistry.putIfAbsent(type.toString()
-                            + ':' + id + '@' + extraInfo, new AtomicInteger(0));
+            //如果原来有这个k 把老的v 返回
+            prevSubmittedCounter = submittedAlarmRegistry
+                    .putIfAbsent(
+                        type.toString() + ':' + id + '@' + extraInfo,
+                        new AtomicInteger(0)
+                    );
+
+            //没有老v  说明真的是新增了任务, 不是在重复提交
             if (null == prevSubmittedCounter) {
+                //放入队列
                 alarmQueue.put(alarmInfo);
+
+                //mark 计数器++
                 terminationToken.reservations.incrementAndGet();
             } else {
 
                 // 故障未恢复，不用重复发送告警信息给服务器，故仅增加计数
-                duplicateSubmissionCount =
-                        prevSubmittedCounter.incrementAndGet();
+                duplicateSubmissionCount = prevSubmittedCounter.incrementAndGet();
             }
         } catch (Throwable t) {
             t.printStackTrace();
@@ -111,6 +123,7 @@ public class AlarmSendingThread extends AbstractTerminatableThread {
         return duplicateSubmissionCount;
     }
 
+    //mark 终止后的清理工作
     @Override
     protected void doCleanup(Exception exp) {
         if (null != exp && !(exp instanceof InterruptedException)) {
