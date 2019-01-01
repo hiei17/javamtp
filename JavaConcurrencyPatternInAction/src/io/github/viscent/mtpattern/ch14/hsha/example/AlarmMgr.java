@@ -32,7 +32,6 @@ public class AlarmMgr {
         return INSTANCE;
     }
 
-
     //构造以后 调用init
     private final AlarmSendingThread alarmSendingThread;
     public void init() {
@@ -62,6 +61,7 @@ public class AlarmMgr {
             AlarmInfo alarmInfo = new AlarmInfo(id, type);
             alarmInfo.setExtraInfo(extraInfo);
 
+            //提交给另一个线程干
             duplicateSubmissionCount = alarmSendingThread.sendAlarm(alarmInfo);
         } catch (Throwable t) {
             t.printStackTrace();

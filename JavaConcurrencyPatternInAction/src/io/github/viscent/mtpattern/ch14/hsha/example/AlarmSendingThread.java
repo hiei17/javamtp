@@ -86,7 +86,7 @@ public class AlarmSendingThread extends AbstractTerminatableThread {
         String id = alarmInfo.getId();
         String extraInfo = alarmInfo.getExtraInfo();
 
-        if (terminationToken.isToShutdown()) {
+        if (terminationToken.toShutdown) {
             // 记录告警信息
             System.err.println("rejected alarm:" + id + "," + extraInfo);
             return -1;
@@ -120,7 +120,7 @@ public class AlarmSendingThread extends AbstractTerminatableThread {
             t.printStackTrace();
         }
 
-        return duplicateSubmissionCount;
+        return duplicateSubmissionCount;//返回这条告警重复提交才次数
     }
 
     //mark 终止后的清理工作

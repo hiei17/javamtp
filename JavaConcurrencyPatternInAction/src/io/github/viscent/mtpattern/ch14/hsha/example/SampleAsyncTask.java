@@ -13,17 +13,20 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch14.hsha.example;
 
+import io.github.viscent.mtpattern.ch14.hsha.AsyncTask;
+import io.github.viscent.util.Debug;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import io.github.viscent.mtpattern.ch14.hsha.AsyncTask;
-import io.github.viscent.util.Debug;
-
+//使用复用组件的例子
 public class SampleAsyncTask {
 
     public static void main(String[] args) {
+
         XAsyncTask task = new XAsyncTask();
+
         List<Future<String>> results = new LinkedList<Future<String>>();
 
         try {
@@ -60,10 +63,11 @@ public class SampleAsyncTask {
             Debug.info("onPreExecute:[" + sequence + "]" + message);
         }
 
+        //mark 入口
         public Future<String> doSomething(String message, int sequence) {
+
             if (sequence < 0) {
-                throw new IllegalArgumentException(
-                        "Invalid sequence:" + sequence);
+                throw new IllegalArgumentException("Invalid sequence:" + sequence);
             }
             return this.dispatch(message, sequence);
         }

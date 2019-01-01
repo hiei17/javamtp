@@ -14,14 +14,13 @@ http://www.broadview.com.cn/27006
 package io.github.viscent.mtpattern.ch14.hsha.example;
 
 import io.github.viscent.mtpattern.ch5.tpt.example.AlarmType;
+import org.apache.log4j.Logger;
 
 import java.sql.Connection;
 
-import org.apache.log4j.Logger;
-
 public class SampleAlarmClient {
-	private final static Logger logger = Logger
-	    .getLogger(SampleAlarmClient.class);
+
+	private final static Logger logger = Logger.getLogger(SampleAlarmClient.class);
 
 	// 告警日志抑制阈值
 	private static final int ALARM_MSG_SUPRESS_THRESHOLD = 10;
@@ -33,27 +32,37 @@ public class SampleAlarmClient {
 	}
 
 	public static void main(String[] args) {
+
 		SampleAlarmClient alarmClient = new SampleAlarmClient();
 		Connection dbConn = null;
 		try {
 			dbConn = alarmClient.retrieveDBConnection();
 
-		} catch (Exception e) {
+		} catch (Exception e) {//有故障  告警
+
 			final AlarmMgr alarmMgr = AlarmMgr.getInstance();
 
 			// 告警被重复发送至告警模块的次数
 			int duplicateSubmissionCount;
-			String alarmId = "00000010000020";
-			final String alarmExtraInfo = "operation=GetDBConnection;detail=Failed to get DB connection:"
-			    + e.getMessage();
 
-			duplicateSubmissionCount = alarmMgr.sendAlarm(AlarmType.FAULT, alarmId,
-			    alarmExtraInfo);
+			String alarmId = "00000010000020";
+
+			final String alarmExtraInfo = "operation=GetDBConnection;detail=Failed to get DB connection:" + e.getMessage();
+
+			//mark  发送服务器
+			//返回这条重复提交的次数
+			duplicateSubmissionCount = alarmMgr.sendAlarm(
+					AlarmType.FAULT,
+					alarmId,
+			        alarmExtraInfo
+			);
+
 			if (duplicateSubmissionCount < ALARM_MSG_SUPRESS_THRESHOLD) {
 				logger.error("Alarm[" + alarmId + "] raised,extraInfo:"
 				    + alarmExtraInfo);
 			} else {
 				if (duplicateSubmissionCount == ALARM_MSG_SUPRESS_THRESHOLD) {
+
 					logger.error("Alarm[" + alarmId + "] was raised more than "
 					    + ALARM_MSG_SUPRESS_THRESHOLD
 					    + " times, it will no longer be logged.");
@@ -67,7 +76,7 @@ public class SampleAlarmClient {
 	}
 
 	// 获取数据库连接
-	private Connection retrieveDBConnection() throws Exception {
+	private Connection retrieveDBConnection()  {
 		Connection cnn = null;
 
 		// 省略其他代码

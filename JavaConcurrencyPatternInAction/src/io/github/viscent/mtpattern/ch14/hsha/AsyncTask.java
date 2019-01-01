@@ -13,18 +13,9 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch14.hsha;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 import io.github.viscent.mtpattern.ch9.threadpool.example.ReEnqueueRejectedExecutionHandler;
+
+import java.util.concurrent.*;
 
 /**
  * Half-sync/Half-async模式的可复用实现。
@@ -41,17 +32,15 @@ public abstract class AsyncTask<V> {
     private final static ExecutorService DEFAULT_EXECUTOR;
 
     static {
-        DEFAULT_EXECUTOR = new ThreadPoolExecutor(1, 1, 8, TimeUnit.HOURS,
-                new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        Thread thread = new Thread(r, "AsyncTaskDefaultWorker");
-                                // 使该线程在Java虚拟机关闭时自动停止
-                        thread.setDaemon(true);
-                        return thread;
-                    }
-
+        DEFAULT_EXECUTOR = new ThreadPoolExecutor(
+                1, 1,
+                8, TimeUnit.HOURS,
+                new LinkedBlockingQueue<>(),
+                r -> {
+                    Thread thread = new Thread(r, "AsyncTaskDefaultWorker");
+                            // 使该线程在Java虚拟机关闭时自动停止
+                    thread.setDaemon(true);
+                    return thread;
                 }, /**
                     * 该RejectedExecutionHandler支持重试。 当任务被ThreadPoolExecutor拒绝时，
                     * 该RejectedExecutionHandler支持 重新将任务放入ThreadPoolExecutor
@@ -117,16 +106,12 @@ public abstract class AsyncTask<V> {
         FutureTask<V> ft = null;
 
         // 进行异步层初步处理
-        onPreExecute(params);
+        onPreExecute(params);//mark 子类选择实现
 
-        Callable<V> callable = new Callable<V>() {
-            @Override
-            public V call() throws Exception {
-                V result;
-                result = doInBackground(params);
-                return result;
-            }
-
+        Callable<V> callable = () -> {
+            V result;
+            result = doInBackground(params);//mark 子类一定要实现
+            return result;
         };
 
         ft = new FutureTask<V>(callable) {
@@ -134,11 +119,11 @@ public abstract class AsyncTask<V> {
             @Override
             protected void done() {
                 try {
-                    onPostExecute(this.get());
+                    onPostExecute(this.get());//mark 子类选择实现
                 } catch (InterruptedException e) {
-                    onExecutionError(e);
+                    onExecutionError(e);//mark 子类选择实现
                 } catch (ExecutionException e) {
-                    onExecutionError(e);
+                    onExecutionError(e);//mark 子类选择实现
                 }
             }
 
