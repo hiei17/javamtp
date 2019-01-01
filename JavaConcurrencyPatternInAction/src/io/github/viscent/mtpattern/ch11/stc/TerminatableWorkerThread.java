@@ -13,12 +13,12 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch11.stc;
 
+import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
-
-import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
 
 /**
  * Serial Thread Confinement模式WorkerThread参与者可复用实现。 该类使用了Two-phase
@@ -32,6 +32,7 @@ import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
  *            表示任务执行结果的类型
  */
 public class TerminatableWorkerThread<T, V> extends AbstractTerminatableThread {
+
     private final BlockingQueue<Runnable> workQueue;
 
     // 负责真正执行任务的对象
@@ -52,14 +53,8 @@ public class TerminatableWorkerThread<T, V> extends AbstractTerminatableThread {
      * @throws InterruptedException
      */
     public Future<V> submit(final T task) throws InterruptedException {
-        Callable<V> callable = new Callable<V>() {
 
-            @Override
-            public V call() throws Exception {
-                return taskProcessor.doProcess(task);
-            }
-
-        };
+        Callable<V> callable = () -> taskProcessor.doProcess(task);
 
         FutureTask<V> ft = new FutureTask<V>(callable);
         workQueue.put(ft);
@@ -73,6 +68,7 @@ public class TerminatableWorkerThread<T, V> extends AbstractTerminatableThread {
      */
     @Override
     protected void doRun() throws Exception {
+
         Runnable ft = workQueue.take();
         try {
             ft.run();

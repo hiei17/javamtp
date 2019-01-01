@@ -1,24 +1,24 @@
 package io.github.viscent.mtpattern.ch11.stc.example;
 
+import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
+import io.github.viscent.util.Debug;
+import org.apache.commons.net.ftp.FTP;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPClientConfig;
+import org.apache.commons.net.ftp.FTPReply;
+
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import org.apache.commons.net.ftp.FTP;
-import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPClientConfig;
-import org.apache.commons.net.ftp.FTPReply;
-
-import io.github.viscent.mtpattern.ch5.tpt.AbstractTerminatableThread;
-import io.github.viscent.util.Debug;
-
 //模式角色：SerialThreadConfinement.WorkerThread
-public class WorkerThread extends AbstractTerminatableThread {
+public class WorkerThread extends AbstractTerminatableThread {// 还用了2阶段终止
 
-    // 模式角色：SerialThreadConfinement.Queue
+    // mark  模式角色：SerialThreadConfinement.Queue
     protected final BlockingQueue<String> workQueue;
+
     private final FTPClient ftpClient;
     private final String outputDir;
     private String servWorkingDir;
@@ -33,9 +33,13 @@ public class WorkerThread extends AbstractTerminatableThread {
     }
 
     public void download(String file) {
+
         try {
+            //任务入队
             workQueue.put(file);
+
             terminationToken.reservations.incrementAndGet();
+
         } catch (InterruptedException e) {
             ;
         }
@@ -84,13 +88,16 @@ public class WorkerThread extends AbstractTerminatableThread {
 
     }
 
+    //任务执行逻辑, 会在父类的run()里面死循环执行 直到客户端发起终止
     @Override
     protected void doRun() throws Exception {
+
         String file = workQueue.take();
+
         Debug.info("Downloading %s", file);
         boolean isOK;
-        try (OutputStream os = new BufferedOutputStream(
-                new FileOutputStream(outputDir + file))) {
+        try (OutputStream os = new BufferedOutputStream(new FileOutputStream(outputDir + file))) {
+
             isOK = ftpClient.retrieveFile(file, os);
             if (!isOK) {
                 Debug.error("Failed to download %s", file);

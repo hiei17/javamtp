@@ -13,6 +13,11 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch13.pipeline.example;
 
+import io.github.viscent.mtpattern.ch13.pipeline.*;
+import io.github.viscent.mtpattern.ch6.promise.example.FTPUploader;
+import io.github.viscent.mtpattern.ch6.promise.example.FTPUploaderPromisor;
+import io.github.viscent.mtpattern.ch9.threadpool.example.ReEnqueueRejectedExecutionHandler;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -20,25 +25,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import io.github.viscent.mtpattern.ch13.pipeline.AbstractParallelPipe;
-import io.github.viscent.mtpattern.ch13.pipeline.AbstractPipe;
-import io.github.viscent.mtpattern.ch13.pipeline.Pipe;
-import io.github.viscent.mtpattern.ch13.pipeline.PipeContext;
-import io.github.viscent.mtpattern.ch13.pipeline.PipeException;
-import io.github.viscent.mtpattern.ch13.pipeline.Pipeline;
-import io.github.viscent.mtpattern.ch13.pipeline.SimplePipeline;
-import io.github.viscent.mtpattern.ch6.promise.example.FTPUploader;
-import io.github.viscent.mtpattern.ch6.promise.example.FTPUploaderPromisor;
-import io.github.viscent.mtpattern.ch9.threadpool.example.ReEnqueueRejectedExecutionHandler;
+import java.util.concurrent.*;
 
 public class DataSyncTask implements Runnable {
     private final Properties config;
@@ -81,7 +68,7 @@ public class DataSyncTask implements Runnable {
          * 这里，各个Pipe的初始化话完全可以在上游Pipe初始化完毕后再初始化其后继Pipe，而不必多个Pipe同时初始化。
          * 因此，这个初始化的动作可以由一个线程来处理。该线程处理完各个Pipe的初始化后，可以继续处理之后可能产生的任务， 如错误处理。
          * 所以，上述这些先后产生的任务可以由线程池中的一个工作者线程从头到尾负责执行。
-         * 
+         *
          * 由于这里的几个Pipe都是处理I/O的，为了避免使用锁（以减少不必要的上下文切换） 但又能保证线程安全，故每个Pipe都采用单线程处理。
          * 若各个Pipe要改用线程池来处理，需要注意：1）线程安全 2）死锁
          */
@@ -151,11 +138,10 @@ public class DataSyncTask implements Runnable {
         final String ftpServerDir = this.config.getProperty("ftp.serverdir");
 
         // AbstractParallelPipe类的源码参见清单13-7
-        ret = new AbstractParallelPipe<File, File, File>(
-                        new SynchronousQueue<File>(), ftpExecutorService) {
+        ret = new AbstractParallelPipe<File, File, File>(new SynchronousQueue<>(), ftpExecutorService)
+        {
             @SuppressWarnings("unchecked")
-                    final Future<FTPUploader>[] ftpClientUtilHolders =
-                            new Future[ftpServerConfigs.length];
+            final Future<FTPUploader>[] ftpClientUtilHolders = new Future[ftpServerConfigs.length];
 
             @Override
             public void init(PipeContext pipeCtx) {
@@ -163,21 +149,21 @@ public class DataSyncTask implements Runnable {
                 String[] ftpServerConfig;
                 for (int i = 0; i < ftpServerConfigs.length; i++) {
                     ftpServerConfig = ftpServerConfigs[i];
-                            // FTPUploaderPromisor类的源码参见清单6-2
-                            ftpClientUtilHolders[i] =
-                                    FTPUploaderPromisor.newFTPUploaderPromise(
-                                            ftpServerConfig[0],
-                                            ftpServerConfig[1],
-                            ftpServerConfig[2], ftpServerDir,
-                            ftpExecutorService);
+                    // FTPUploaderPromisor类的源码参见清单6-2
+                    ftpClientUtilHolders[i] =
+                            FTPUploaderPromisor.newFTPUploaderPromise(
+                                    ftpServerConfig[0],
+                                    ftpServerConfig[1],
+                                    ftpServerConfig[2], ftpServerDir,
+                                    ftpExecutorService);
                 }
             }
 
             @Override
             protected List<Callable<File>> buildTasks(final File file) {
-                        // 创建一组并发任务，这些任务将指定的文件上传到FTP服务器上
-                        List<Callable<File>> tasks = new LinkedList<>();
-                for (Future<FTPUploader> ftpClientUtilHolder 
+                // 创建一组并发任务，这些任务将指定的文件上传到FTP服务器上
+                List<Callable<File>> tasks = new LinkedList<>();
+                for (Future<FTPUploader> ftpClientUtilHolder
                         : ftpClientUtilHolders) {
                     tasks.add(new FileTransferTask(ftpClientUtilHolder, file));
                 }
@@ -203,7 +189,7 @@ public class DataSyncTask implements Runnable {
                 } catch (InterruptedException e1) {
                     ;
                 }
-                for (Future<FTPUploader> ftpClientUtilHolder 
+                for (Future<FTPUploader> ftpClientUtilHolder
                         : ftpClientUtilHolders) {
                     try {
                         ftpClientUtilHolder.get().disconnect();
@@ -250,7 +236,7 @@ public class DataSyncTask implements Runnable {
     }
 
     private void processRecords(RecordSource recordSource,
-            Pipeline<RecordSaveTask, String> pipeline) throws Exception {
+                                Pipeline<RecordSaveTask, String> pipeline) throws Exception {
         Record record;
         Record[] records = new Record[Config.RECORD_SAVE_CHUNK_SIZE];
         int targetFileIndex = 0;

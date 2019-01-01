@@ -27,19 +27,26 @@ import java.util.concurrent.Future;
  *            service方法的返回值类型
  */
 public abstract class AbstractSerializer<T, V> {
+
     private final TerminatableWorkerThread<T, V> workerThread;
 
-    public AbstractSerializer(BlockingQueue<Runnable> workQueue,
-            TaskProcessor<T, V> taskProcessor) {
-        workerThread = new TerminatableWorkerThread<T, V>(workQueue,
-                taskProcessor);
+    /**
+     *
+     * @param workQueue 缓存任务的队列
+     * @param taskProcessor 怎么处理任务
+     */
+    public AbstractSerializer(
+            BlockingQueue<Runnable> workQueue,
+            TaskProcessor<T, V> taskProcessor
+    )
+    {
+        workerThread = new TerminatableWorkerThread<>(workQueue, taskProcessor);
     }
 
     /**
      * 留给子类实现。用于根据指定参数生成相应的任务实例。
      * 
-     * @param params
-     *            参数列表
+     * @param params 参数列表
      * @return 任务实例。用于提交给WorkerThread。
      */
     protected abstract T makeTask(Object... params);
@@ -54,10 +61,10 @@ public abstract class AbstractSerializer<T, V> {
      * @throws InterruptedException
      */
     protected Future<V> service(Object... params) throws InterruptedException {
-        T task = makeTask(params);
-        Future<V> resultPromise = workerThread.submit(task);
 
-        return resultPromise;
+        T task = makeTask(params);
+
+        return workerThread.submit(task);
     }
 
     /**

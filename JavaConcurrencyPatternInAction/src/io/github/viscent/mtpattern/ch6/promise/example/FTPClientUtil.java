@@ -13,28 +13,23 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch6.promise.example;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPClientConfig;
 import org.apache.commons.net.ftp.FTPReply;
 
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
+
 //模式角色：Promise.Result
 public class FTPClientUtil implements FTPUploader {
+
     final FTPClient ftp = new FTPClient();
     final Map<String, Boolean> dirCreateMap = new HashMap<>();
 
-    public void init(String ftpServer, String userName, String password,
-            String serverDir)
-            throws Exception {
+    @Override
+    public void init(String ftpServer, String userName, String password, String serverDir) throws Exception {
 
         FTPClientConfig config = new FTPClientConfig();
         ftp.configure(config);

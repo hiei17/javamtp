@@ -13,26 +13,15 @@ http://www.broadview.com.cn/27006
 
 package io.github.viscent.mtpattern.ch13.pipeline.example;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPClientConfig;
 import org.apache.commons.net.ftp.FTPReply;
+
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.*;
 
 //模式角色：Promise.Promisor、Promise.Result
 public class FTPClientUtil {
@@ -64,24 +53,20 @@ public class FTPClientUtil {
 	}
 
 	// 模式角色：Promise.Promisor.compute
-	public static Future<FTPClientUtil> newInstance(final String ftpServer,
-	    final String userName, final String password) {
+	public static Future<FTPClientUtil> newInstance(final String ftpServer, final String userName, final String password) {
 
-		Callable<FTPClientUtil> callable = new Callable<FTPClientUtil>() {
+		Callable<FTPClientUtil> callable = () -> {
 
-			@Override
-			public FTPClientUtil call() throws Exception {
-				FTPClientUtil self = new FTPClientUtil();
-				self.init(ftpServer, userName, password);
-				return self;
-			}
-
+			FTPClientUtil self = new FTPClientUtil();
+			self.init(ftpServer, userName, password);
+			return self;
 		};
 
 		// task相当于模式角色：Promise.Promise
-		final FutureTask<FTPClientUtil> task = new FutureTask<FTPClientUtil>(
-		    callable);
+		final FutureTask<FTPClientUtil> task = new FutureTask<>(callable);
+
 		helperExecutor.execute(task);
+		
 		return task;
 	}
 
